@@ -1,7 +1,10 @@
 // # Bottom Up Datalog
 
 // ## Our example facts and rules
+//
+// ---
 
+// The first fact states that `"alice"` is a parent of `"bob"`.
 var facts = [
   ["parent", "alice", "bob"],
   ["parent", "alice", "bill"],
@@ -10,6 +13,7 @@ var facts = [
   ["parent", "carol", "david"]
 ]
 
+// `"X"` is an ancestor of `"Y"` if it's a parent, or if it is a recursive parent.
 var rules = [
   [["ancestor", "X", "Y"], ["parent", "X", "Y"]],
   [["ancestor", "X", "Y"], ["ancestor", "X", "Z"],
@@ -17,6 +21,8 @@ var rules = [
 ]
 
 // ## The code
+// ---
+//
 // To answer a query, we first need to build a database and then run
 // our query against all the facts in the database.
 
@@ -99,6 +105,7 @@ function generateBindings(facts, rule) {
 }
 
 // ## Evaluation
+// ---
 
 // Now that the database is complete, we can run evalQuery on the
 // facts to get the result of the query.
@@ -193,11 +200,8 @@ function unifyBindingArrays(arr1, arr2) {
   }))
 }
 
-
-function assertQuery(query, result) {
-  console.assert(_.isEqual(answerQuery(facts, rules, query), result))
-}
-
+// ## Examples
+// ---
 assertQuery(["ancestor", "carol", "Y"], [{"Y": "dennis"},
                                          {"Y": "david"}]);
 
@@ -205,3 +209,7 @@ assertQuery(["ancestor", "X", "carol"], [{"X": "bob"},
                                          {"X": "alice"}]);
 
 console.log(answerQuery(facts, rules, ["ancestor", "X", "Y"]));
+
+function assertQuery(query, result) {
+  console.assert(_.isEqual(answerQuery(facts, rules, query), result))
+}
