@@ -164,6 +164,27 @@ function unifyBindings(bindings1, bindings2) {
   }
 }
 
+// Unifies all the bindings from one goal with all the bindings from
+// another goal. Let's imagine for example the goals
+// `["ancestor", "X", "Y"]` and `["ancestor", "Y", "Z"]`, for which
+// the possible bindings might look like
+//
+//     [{"X": "alice", "Y": "bob"}, {"X": "teddy", "Y": "bob"}]
+//
+// and
+//
+//     [{"Y": "bob", "Z": "carol"}, {"Y": "joe", "Z": "jack"}]
+//
+// Now the result is
+//
+//     [{"X": "alice", "Y": "bob", "Z": "carol"},
+//      {"X": "teddy", "Y": "bob", "Z": "carol"}]
+//
+// because both bindings in the first array can be unified with the
+// first binding in the second array, but no unification is possible
+// for the binding `{"Y": "joe", "Z": "jack"}`.
+
+
 // Takes two arrays `arr1` and `arr2` of bindings. For each binding `b` in `arr1`,
 // unifies it with each binding in `arr2` (and discards anything that cannot by unified).
 function unifyBindingArrays(arr1, arr2) {
