@@ -79,19 +79,22 @@ function ruleAsFacts(facts, rule) {
 //     [{X: "alice", Y: "bob", Z:...}, {X: "alice", Y: "bill", Z:...}, ...]
 
 function generateBindings(facts, rule) {
+
   // resolve all the variables in the goals of the rule
   // for one goal:
-  // ["ancestor", "X", "Y"] ==> [{X: "alice", Y: "bob"}, {X: "alice", Y: "bill"}, ...]
+  //
+  //       ["ancestor", "X", "Y"] ==> [{X: "alice", Y: "bob"}, {X: "alice", Y: "bill"}, ...]
   var goals = _.map(_.rest(rule), _.partial(evalQuery, facts));
   // several goals might have conflicting bindings, for example
-  // [{X: "alice"}, {X: "bob"}] [{X: "alice", X: "bill"}]
+  //
+  //       [{X: "alice"}, {X: "bob"}] [{X: "alice", X: "bill"}]
   // unify all the resolved goals to compute the final binding
-
-  // [{X: "alice"}, {X: "bob"}] [{X: "alice"}, {X: "bill"}] => [{X: "alice"}]
+  //
+  //       [{X: "alice"}, {X: "bob"}] [{X: "alice"}, {X: "bill"}] => [{X: "alice"}]
   //               ^                          ^                    ^
   //            goal 1                   goal 2                unified result
-
-  // [{X: "alice", Y: "bob"}] [{X: "alice", Y: "bill"}] => []
+  //
+  //       [{X: "alice", Y: "bob"}] [{X: "alice", Y: "bill"}] => []
   return _.reduce(_.rest(goals), unifyBindingArrays, _.first(goals));
 }
 
@@ -104,20 +107,45 @@ function evalQuery(facts, query) {
   return _.map(matchingFacts, _.partial(asBinding, query));
 }
 
+// Takes a query, e.g.  `["parent","X","bob"]`
+// and a fact, e.g.  `["parent","alice","bob"]`
+// and returns true if all the atoms match (`"bob"` and `"bob"`),
+// or if one of them is a variable (e.g. `"X"` and `"alice"`).
+//
+// Will return false if there is no match, e.g. `["parent", "alice", "bob"]`
+// and `["parent", "alice", "carol"]`
+// because the atoms `"bob"` and `"carol"` do not match.
 function unify(query, fact) {
   return _.every(_.zip(query, fact), function(pair) {
     return pair[0] == pair[1] || isVariable(pair[0]) || isVariable(pair[1]);
   });
 }
 
-function isVariable(identifier) {
-  return identifier[0].toUpperCase() == identifier[0]
-}
 
+// Takes a query, e.g.  `["parent","X","bob"]`
+// and a fact, e.g.  `["parent","alice","bob"]`
+// and returns an object with the query variables as keys,
+// and the matching atoms in the fact as values, e.g.
+// `{"X": "alice"}`.
 function asBinding(query, fact) {
   return _.pick(_.object(query, fact), _.filter(query, isVariable));
 }
 
+// An identifier is a variable if it starts with an uppercase symbol.
+function isVariable(identifier) {
+  return identifier[0].toUpperCase() == identifier[0]
+}
+
+// Takes a query (e.g. `["parent","X","bob"]`) and bindings (e.g. `{"X": "alice"}`)
+// and substitutes each variable with the corresponding binding, e.g.
+// `["parent","alice","bob"]`
+function substitute(query, bindings) {
+  return _.map(query, _.partial(unifyVar, bindings));
+}
+
+// Takes bindings (e.g. `{"X": "alice"}`) and looks up the value for
+// the identifier if it's a variable. For example, `"X"` becomes `"alice"`, but 
+// `"bob"` stays `"bob"`.
 function unifyVar(bindings, identifier) {
   if (isVariable(identifier)) {
     return bindings[identifier] || identifier;
@@ -126,21 +154,9 @@ function unifyVar(bindings, identifier) {
   }
 }
 
-function substitute(term, bindings) {
-  return _.map(term, _.partial(unifyVar, bindings));
-}
-
-function assertQuery(query, result) {
-  console.assert(_.isEqual(answerQuery(facts, rules, query), result))
-}
-
-
-function unifyBindingArrays(arr1, arr2) {
-  return _.flatten(_.map(arr1, function(bindings) {
-    return _.compact(_.map(arr2, _.partial(unifyBindings, bindings)))
-  }))
-}
-
+// Takes two bindings, e.g. `{"X": "alice", "Y": "bob"}` and
+// `{"X": "alice", "Z": "carol"}`, and returns the unification, e.g.
+// `{"X": "alice", "Y": "bob", "Z": "carol"}`.
 function unifyBindings(bindings1, bindings2) {
   var joined = _.defaults(_.clone(bindings1), bindings2);
   if (_.isEqual(joined, _.extend(_.clone(bindings1), bindings2))) {
@@ -148,6 +164,18 @@ function unifyBindings(bindings1, bindings2) {
   }
 }
 
+// Takes two arrays `arr1` and `arr2` of bindings. For each binding `b` in `arr1`,
+// unifies it with each binding in `arr2` (and discards anything that cannot by unified).
+function unifyBindingArrays(arr1, arr2) {
+  return _.flatten(_.map(arr1, function(bindings) {
+    return _.compact(_.map(arr2, _.partial(unifyBindings, bindings)))
+  }))
+}
+
+
+function assertQuery(query, result) {
+  console.assert(_.isEqual(answerQuery(facts, rules, query), result))
+}
 
 assertQuery(["ancestor", "carol", "Y"], [{"Y": "dennis"},
                                          {"Y": "david"}]);
