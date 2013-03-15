@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>Bottom Up Datalog</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="docco.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+    <ul class="sections">
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="pilwrap for-h1">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+              <h1>Bottom Up Datalog</h1>
+<h2>The database</h2>
+<hr>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-2">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-2">&#182;</a>
+              </div>
+              <p>First of all, we need a few facts. Alice is the parent of both Bob
+and Bill, this is expressed as <code>[&quot;parent&quot;, &quot;alice&quot;, &quot;bob&quot;]</code> and
+<code>[&quot;parent&quot;, &quot;alice&quot;, &quot;bill&quot;]</code>. Bob and Bill are parent themselves
+and so forth.</p>
+<p>This part of the database is called the <em>Extensional Database</em>, or
+<em>EDB</em> for short, because we state the facts by simply enumerating
+them all.</p>
+
+            </div>
+            
+            <div class="content"><div class="highlight"><pre><span class="keyword">var</span> facts = [
+  [<span class="string">"parent"</span>, <span class="string">"alice"</span>, <span class="string">"bob"</span>],
+  [<span class="string">"parent"</span>, <span class="string">"alice"</span>, <span class="string">"bill"</span>],
+  [<span class="string">"parent"</span>, <span class="string">"bob"</span>, <span class="string">"carol"</span>],
+  [<span class="string">"parent"</span>, <span class="string">"carol"</span>, <span class="string">"dennis"</span>],
+  [<span class="string">"parent"</span>, <span class="string">"carol"</span>, <span class="string">"david"</span>]
+]</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-3">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-3">&#182;</a>
+              </div>
+              <p>Let&#39;s now define a few rules, which allow us to derive new facts
+based on the existing database.</p>
+<p>Here we say that <code>&quot;X&quot;</code> is an ancestor of <code>&quot;Y&quot;</code> if <code>&quot;X&quot;</code> is either a
+direct parent (first rule) or if we can trace a line of descendants
+between them using some intermediate ancestor <code>&quot;Z&quot;</code> (second rule).
+As you might have guessed, every rule starts with a head, which is
+a true fact whenever all the following goals are true.</p>
+<p>This part of the database is called the <em>Intensional Database</em>,
+because we don&#39;t state facts directly but use rules to derive them.
+This part is what makes Datalog interesting.</p>
+
+            </div>
+            
+            <div class="content"><div class="highlight"><pre><span class="keyword">var</span> rules = [
+  [[<span class="string">"ancestor"</span>, <span class="string">"X"</span>, <span class="string">"Y"</span>], [<span class="string">"parent"</span>, <span class="string">"X"</span>, <span class="string">"Y"</span>]],
+  [[<span class="string">"ancestor"</span>, <span class="string">"X"</span>, <span class="string">"Y"</span>], [<span class="string">"ancestor"</span>, <span class="string">"X"</span>, <span class="string">"Z"</span>],
+                           [<span class="string">"ancestor"</span>, <span class="string">"Z"</span>, <span class="string">"Y"</span>]]
+]</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-4">
+            <div class="annotation">
+              
+              <div class="pilwrap for-h2">
+                <a class="pilcrow" href="#section-4">&#182;</a>
+              </div>
+              <h2>The code</h2>
+<hr>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-5">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-5">&#182;</a>
+              </div>
+              <p>To answer a query, we first need to build a database and then run
+our query against all the facts in the database.</p>
+
+            </div>
+            
+            <div class="content"><div class="highlight"><pre><span class="function"><span class="keyword">function</span> <span class="title">answerQuery</span><span class="params">(facts, rules, query)</span> {</span>
+  <span class="keyword">return</span> evalQuery(buildDatabase(facts, rules), query);
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-6">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-6">&#182;</a>
+              </div>
+              <p>buildDatabase takes rules and turns these rules into new facts
+based upon the facts so far. We then add these new facts and try to
+apply all the rules again until no new facts can be derived. (In
+fancy lingo: A fixpoint is reached)</p>
+
+            </div>
+            
+            <div class="content"><div class="highlight"><pre><span class="function"><span class="keyword">function</span> <span class="title">buildDatabase</span><span class="params">(facts, rules)</span> {</span>
+  <span class="keyword">var</span> newFacts = _.reduce(rules, addRule, facts);
+  <span class="keyword">if</span> (facts.length == newFacts.length) {
+    <span class="keyword">return</span> facts;
+  } <span class="keyword">else</span> {
+    <span class="keyword">return</span> buildDatabase(newFacts, rules);
+  }
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-7">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-7">&#182;</a>
+              </div>
+              <p>Takes facts and a single rule and returns all the derived facts.</p>
+
+            </div>
+            
+            <div class="content"><div class="highlight"><pre><span class="function"><span class="keyword">function</span> <span class="title">addRule</span><span class="params">(facts, rule)</span> {</span>
+  <span class="keyword">var</span> newFacts = _.union(facts, ruleAsFacts(facts, rule));
+  <span class="keyword">return</span> _.uniq(newFacts, <span class="literal">false</span>, JSON.stringify);
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-8">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-8">&#182;</a>
+              </div>
+              <p>To turn a rule into a fact, we start by generating all the possible
+bindings of that rule. A binding for the rule</p>
+<pre><code>  [[&quot;ancestor&quot;, &quot;X&quot;, &quot;Y&quot;], [&quot;parent&quot;, &quot;X&quot;, &quot;Y&quot;]]</code></pre>
+<p>could look like this:</p>
+<pre><code>{&quot;X&quot;: &quot;alice&quot;, &quot;Y&quot;: &quot;bob&quot;}</code></pre>
+<p>i.e. it contains all the possible variable bindings of a rule.</p>
+<p>We now take all the possible bindings as an array and match them
+with the rule head, in our example case with</p>
+<pre><code>[&quot;ancestor&quot;, &quot;X&quot;, &quot;Y&quot;]</code></pre>
+<p>leading to the result</p>
+<pre><code>[&quot;ancestor&quot;, &quot;alice&quot;, &quot;bob&quot;]</code></pre>
+<p>FIXME: show that the result is actually an array of results</p>
+
+            </div>
+            
+            <div class="content"><div class="highlight"><pre><span class="function"><span class="keyword">function</span> <span class="title">ruleAsFacts</span><span class="params">(facts, rule)</span> {</span>
+  <span class="keyword">var</span> allPossibleBindings = generateBindings(facts, rule);
+  <span class="keyword">return</span> _.map(allPossibleBindings, _.partial(substitute, rule[<span class="number">0</span>]))
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-9">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-9">&#182;</a>
+              </div>
+              <pre><code>[[&quot;ancestor&quot;, &quot;X&quot;, &quot;Y&quot;], [&quot;ancestor&quot;, &quot;X&quot;, &quot;Z&quot;], [&quot;ancestor&quot;, &quot;Z&quot;, &quot;Y&quot;]]
+    ^                       ^                    ^
+ rule head                 goal 1              goal 2</code></pre>
+<p>becomes</p>
+<pre><code>[{X: &quot;alice&quot;, Y: &quot;bob&quot;, Z:...}, {X: &quot;alice&quot;, Y: &quot;bill&quot;, Z:...}, ...]</code></pre>
+
+            </div>
+            
+            <div class="content"><div class="highlight"><pre><span class="function"><span class="keyword">function</span> <span class="title">generateBindings</span><span class="params">(facts, rule)</span> {</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-10">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-10">&#182;</a>
+              </div>
+              <p>resolve all the variables in the goals of the rule
+for one goal:</p>
+<pre><code>  [&quot;ancestor&quot;, &quot;X&quot;, &quot;Y&quot;] ==&gt; [{X: &quot;alice&quot;, Y: &quot;bob&quot;}, {X: &quot;alice&quot;, Y: &quot;bill&quot;}, ...]</code></pre>
+
+            </div>
+            
+            <div class="content"><div class="highlight"><pre><span class="keyword">var</span> goals = _.map(_.rest(rule), _.partial(evalQuery, facts));</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-11">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-11">&#182;</a>
+              </div>
+              <p>several goals might have conflicting bindings, for example</p>
+<pre><code>  [{X: &quot;alice&quot;}, {X: &quot;bob&quot;}] [{X: &quot;alice&quot;, X: &quot;bill&quot;}]</code></pre>
+<p>unify all the resolved goals to compute the final binding</p>
+<pre><code>  [{X: &quot;alice&quot;}, {X: &quot;bob&quot;}] [{X: &quot;alice&quot;}, {X: &quot;bill&quot;}] =&gt; [{X: &quot;alice&quot;}]
+          ^                          ^                    ^
+       goal 1                   goal 2                unified result
+
+  [{X: &quot;alice&quot;, Y: &quot;bob&quot;}] [{X: &quot;alice&quot;, Y: &quot;bill&quot;}] =&gt; []</code></pre>
+
+            </div>
+            
+            <div class="content"><div class="highlight"><pre><span class="keyword">return</span> _.reduce(_.rest(goals), unifyBindingArrays, _.first(goals));
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-12">
+            <div class="annotation">
+              
+              <div class="pilwrap for-h2">
+                <a class="pilcrow" href="#section-12">&#182;</a>
+              </div>
+              <h2>Evaluation</h2>
+<hr>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-13">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-13">&#182;</a>
+              </div>
+              <p>Now that the database is complete, we can run evalQuery on the
+facts to get the result of the query.</p>
+
+            </div>
+            
+            <div class="content"><div class="highlight"><pre><span class="function"><span class="keyword">function</span> <span class="title">evalQuery</span><span class="params">(facts, query)</span> {</span>
+  <span class="keyword">var</span> matchingFacts = _.filter(facts, _.partial(unify, query));
+  <span class="keyword">return</span> _.map(matchingFacts, _.partial(asBinding, query));
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-14">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-14">&#182;</a>
+              </div>
+              <p>Takes a query, e.g.  <code>[&quot;parent&quot;,&quot;X&quot;,&quot;bob&quot;]</code>
+and a fact, e.g.  <code>[&quot;parent&quot;,&quot;alice&quot;,&quot;bob&quot;]</code>
+and returns true if all the atoms match (<code>&quot;bob&quot;</code> and <code>&quot;bob&quot;</code>),
+or if one of them is a variable (e.g. <code>&quot;X&quot;</code> and <code>&quot;alice&quot;</code>).</p>
+<p>Will return false if there is no match, e.g. <code>[&quot;parent&quot;, &quot;alice&quot;, &quot;bob&quot;]</code>
+and <code>[&quot;parent&quot;, &quot;alice&quot;, &quot;carol&quot;]</code>
+because the atoms <code>&quot;bob&quot;</code> and <code>&quot;carol&quot;</code> do not match.</p>
+
+            </div>
+            
+            <div class="content"><div class="highlight"><pre><span class="function"><span class="keyword">function</span> <span class="title">unify</span><span class="params">(query, fact)</span> {</span>
+  <span class="keyword">return</span> _.every(_.zip(query, fact), <span class="keyword">function</span>(pair) {
+    <span class="keyword">return</span> pair[<span class="number">0</span>] == pair[<span class="number">1</span>] || isVariable(pair[<span class="number">0</span>]) || isVariable(pair[<span class="number">1</span>]);
+  });
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-15">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-15">&#182;</a>
+              </div>
+              <p>Takes a query, e.g.  <code>[&quot;parent&quot;,&quot;X&quot;,&quot;bob&quot;]</code>
+and a fact, e.g.  <code>[&quot;parent&quot;,&quot;alice&quot;,&quot;bob&quot;]</code>
+and returns an object with the query variables as keys,
+and the matching atoms in the fact as values, e.g.
+<code>{&quot;X&quot;: &quot;alice&quot;}</code>.</p>
+
+            </div>
+            
+            <div class="content"><div class="highlight"><pre><span class="function"><span class="keyword">function</span> <span class="title">asBinding</span><span class="params">(query, fact)</span> {</span>
+  <span class="keyword">return</span> _.pick(_.object(query, fact), _.filter(query, isVariable));
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-16">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-16">&#182;</a>
+              </div>
+              <p>An identifier is a variable if it starts with an uppercase symbol.</p>
+
+            </div>
+            
+            <div class="content"><div class="highlight"><pre><span class="function"><span class="keyword">function</span> <span class="title">isVariable</span><span class="params">(identifier)</span> {</span>
+  <span class="keyword">return</span> identifier[<span class="number">0</span>].toUpperCase() == identifier[<span class="number">0</span>]
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-17">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-17">&#182;</a>
+              </div>
+              <p>Takes a query (e.g. <code>[&quot;parent&quot;,&quot;X&quot;,&quot;bob&quot;]</code>) and bindings (e.g. <code>{&quot;X&quot;: &quot;alice&quot;}</code>)
+and substitutes each variable with the corresponding binding, e.g.
+<code>[&quot;parent&quot;,&quot;alice&quot;,&quot;bob&quot;]</code></p>
+
+            </div>
+            
+            <div class="content"><div class="highlight"><pre><span class="function"><span class="keyword">function</span> <span class="title">substitute</span><span class="params">(query, bindings)</span> {</span>
+  <span class="keyword">return</span> _.map(query, _.partial(unifyVar, bindings));
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-18">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-18">&#182;</a>
+              </div>
+              <p>Takes bindings (e.g. <code>{&quot;X&quot;: &quot;alice&quot;}</code>) and looks up the value for
+the identifier if it&#39;s a variable. For example, <code>&quot;X&quot;</code> becomes <code>&quot;alice&quot;</code>, but 
+<code>&quot;bob&quot;</code> stays <code>&quot;bob&quot;</code>.</p>
+
+            </div>
+            
+            <div class="content"><div class="highlight"><pre><span class="function"><span class="keyword">function</span> <span class="title">unifyVar</span><span class="params">(bindings, identifier)</span> {</span>
+  <span class="keyword">if</span> (isVariable(identifier)) {
+    <span class="keyword">return</span> bindings[identifier] || identifier;
+  } <span class="keyword">else</span> {
+    <span class="keyword">return</span> identifier;
+  }
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-19">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-19">&#182;</a>
+              </div>
+              <p>Takes two bindings, e.g. <code>{&quot;X&quot;: &quot;alice&quot;, &quot;Y&quot;: &quot;bob&quot;}</code> and
+<code>{&quot;X&quot;: &quot;alice&quot;, &quot;Z&quot;: &quot;carol&quot;}</code>, and returns the unification, e.g.
+<code>{&quot;X&quot;: &quot;alice&quot;, &quot;Y&quot;: &quot;bob&quot;, &quot;Z&quot;: &quot;carol&quot;}</code>.</p>
+
+            </div>
+            
+            <div class="content"><div class="highlight"><pre><span class="function"><span class="keyword">function</span> <span class="title">unifyBindings</span><span class="params">(bindings1, bindings2)</span> {</span>
+  <span class="keyword">var</span> joined = _.defaults(_.clone(bindings1), bindings2);
+  <span class="keyword">if</span> (_.isEqual(joined, _.extend(_.clone(bindings1), bindings2))) {
+    <span class="keyword">return</span> joined;
+  }
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-20">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-20">&#182;</a>
+              </div>
+              <p>Unifies all the bindings from one goal with all the bindings from
+another goal. Let&#39;s imagine for example the goals
+<code>[&quot;ancestor&quot;, &quot;X&quot;, &quot;Y&quot;]</code> and <code>[&quot;ancestor&quot;, &quot;Y&quot;, &quot;Z&quot;]</code>, for which
+the possible bindings might look like</p>
+<pre><code>[{&quot;X&quot;: &quot;alice&quot;, &quot;Y&quot;: &quot;bob&quot;}, {&quot;X&quot;: &quot;teddy&quot;, &quot;Y&quot;: &quot;bob&quot;}]</code></pre>
+<p>and</p>
+<pre><code>[{&quot;Y&quot;: &quot;bob&quot;, &quot;Z&quot;: &quot;carol&quot;}, {&quot;Y&quot;: &quot;joe&quot;, &quot;Z&quot;: &quot;jack&quot;}]</code></pre>
+<p>Now the result is</p>
+<pre><code>[{&quot;X&quot;: &quot;alice&quot;, &quot;Y&quot;: &quot;bob&quot;, &quot;Z&quot;: &quot;carol&quot;},
+ {&quot;X&quot;: &quot;teddy&quot;, &quot;Y&quot;: &quot;bob&quot;, &quot;Z&quot;: &quot;carol&quot;}]</code></pre>
+<p>because both bindings in the first array can be unified with the
+first binding in the second array, but no unification is possible
+for the binding <code>{&quot;Y&quot;: &quot;joe&quot;, &quot;Z&quot;: &quot;jack&quot;}</code>.</p>
+<p>Takes two arrays <code>arr1</code> and <code>arr2</code> of bindings. For each binding <code>b</code> in <code>arr1</code>,
+unifies it with each binding in <code>arr2</code> (and discards anything that cannot by unified).</p>
+
+            </div>
+            
+            <div class="content"><div class="highlight"><pre><span class="function"><span class="keyword">function</span> <span class="title">unifyBindingArrays</span><span class="params">(arr1, arr2)</span> {</span>
+  <span class="keyword">return</span> _.flatten(_.map(arr1, <span class="keyword">function</span>(bindings) {
+    <span class="keyword">return</span> _.compact(_.map(arr2, _.partial(unifyBindings, bindings)))
+  }))
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-21">
+            <div class="annotation">
+              
+              <div class="pilwrap for-h2">
+                <a class="pilcrow" href="#section-21">&#182;</a>
+              </div>
+              <h2>Examples</h2>
+<hr>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-22">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-22">&#182;</a>
+              </div>
+              
+            </div>
+            
+            <div class="content"><div class="highlight"><pre>assertQuery([<span class="string">"ancestor"</span>, <span class="string">"carol"</span>, <span class="string">"Y"</span>], [{<span class="string">"Y"</span>: <span class="string">"dennis"</span>},
+                                         {<span class="string">"Y"</span>: <span class="string">"david"</span>}]);
+
+assertQuery([<span class="string">"ancestor"</span>, <span class="string">"X"</span>, <span class="string">"carol"</span>], [{<span class="string">"X"</span>: <span class="string">"bob"</span>},
+                                         {<span class="string">"X"</span>: <span class="string">"alice"</span>}]);
+
+console.log(answerQuery(facts, rules, [<span class="string">"ancestor"</span>, <span class="string">"X"</span>, <span class="string">"Y"</span>]));
+
+<span class="function"><span class="keyword">function</span> <span class="title">assertQuery</span><span class="params">(query, result)</span> {</span>
+  console.assert(_.isEqual(answerQuery(facts, rules, query), result))
+}</pre></div></div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>
