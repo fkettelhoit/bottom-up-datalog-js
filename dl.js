@@ -1,10 +1,18 @@
 // # Bottom Up Datalog
 
-// ## Our example facts and rules
+// ## The database
 //
 // ---
 
-// The first fact states that `"alice"` is a parent of `"bob"`.
+// First of all, we need a few facts. Alice is the parent of both Bob
+// and Bill, this is expressed as `["parent", "alice", "bob"]` and
+// `["parent", "alice", "bill"]`. Bob and Bill are parent themselves
+// and so forth.
+//
+// This part of the database is called the *Extensional Database*, or
+// *EDB* for short, because we state the facts by simply enumerating
+// them all.
+
 var facts = [
   ["parent", "alice", "bob"],
   ["parent", "alice", "bill"],
@@ -13,7 +21,19 @@ var facts = [
   ["parent", "carol", "david"]
 ]
 
-// `"X"` is an ancestor of `"Y"` if it's a parent, or if it is a recursive parent.
+// Let's now define a few rules, which allow us to derive new facts
+// based on the existing database.
+//
+// Here we say that `"X"` is an ancestor of `"Y"` if `"X"` is either a
+// direct parent (first rule) or if we can trace a line of descendants
+// between them using some intermediate ancestor `"Z"` (second rule).
+// As you might have guessed, every rule starts with a head, which is
+// a true fact whenever all the following goals are true.
+//
+// This part of the database is called the *Intensional Database*,
+// because we don't state facts directly but use rules to derive them.
+// This part is what makes Datalog interesting.
+
 var rules = [
   [["ancestor", "X", "Y"], ["parent", "X", "Y"]],
   [["ancestor", "X", "Y"], ["ancestor", "X", "Z"],
@@ -22,7 +42,7 @@ var rules = [
 
 // ## The code
 // ---
-//
+
 // To answer a query, we first need to build a database and then run
 // our query against all the facts in the database.
 
