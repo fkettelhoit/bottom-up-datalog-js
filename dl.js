@@ -30,9 +30,9 @@ var facts = [
 // As you might have guessed, every rule starts with a head, which is
 // a true fact whenever all the following goals are true.
 //
-// This part of the database is called the *Intensional Database*,
-// because we don't state facts directly but use rules to derive them.
-// This part is what makes Datalog interesting.
+// This part of the database is called the *Intensional Database*, or
+// *IDB* for short, because we don't state facts directly but use
+// rules to derive them. This part is what makes Datalog interesting.
 
 var rules = [
   [["ancestor", "X", "Y"], ["parent", "X", "Y"]],
@@ -50,10 +50,10 @@ function answerQuery(facts, rules, query) {
   return evalQuery(buildDatabase(facts, rules), query);
 }
 
-// buildDatabase takes rules and turns these rules into new facts
-// based upon the facts so far. We then add these new facts and try to
+// A database can be built by turning rules into new facts based upon
+// the facts so far. We then add these new facts to the DB and try to
 // apply all the rules again until no new facts can be derived. (In
-// fancy lingo: A fixpoint is reached)
+// fancy lingo: Until a fixpoint is reached)
 
 function buildDatabase(facts, rules) {
   var newFacts = _.reduce(rules, addRule, facts);
@@ -74,9 +74,9 @@ function addRule(facts, rule) {
 // To turn a rule into a fact, we start by generating all the possible
 // bindings of that rule. A binding for the rule
 
-//       [["ancestor", "X", "Y"], ["parent", "X", "Y"]]
+//     [["ancestor", "X", "Y"], ["parent", "X", "Y"]]
 
-// could look like this:
+// could look like
 
 //     {"X": "alice", "Y": "bob"}
 
@@ -127,8 +127,10 @@ function generateBindings(facts, rule) {
 // ## Evaluation
 // ---
 
-// Now that the database is complete, we can run evalQuery on the
-// facts to get the result of the query.
+// Now that the database is complete, we can check which facts (if
+// any) match against our query by comparing query and fact element
+// for element, unifying variables if necessary.
+
 function evalQuery(facts, query) {
   var matchingFacts = _.filter(facts, _.partial(unify, query));
   return _.map(matchingFacts, _.partial(asBinding, query));
@@ -222,14 +224,25 @@ function unifyBindingArrays(arr1, arr2) {
 
 // ## Examples
 // ---
+
+// Let's do some poor man's unit tests!
+function assertQuery(query, result) {
+  console.assert(_.isEqual(answerQuery(facts, rules, query), result))
+}
+
+// Carol should be the ancestor of both Dennis and David.
 assertQuery(["ancestor", "carol", "Y"], [{"Y": "dennis"},
                                          {"Y": "david"}]);
 
+// Bob and Alice should be the ancestors of Carol.
 assertQuery(["ancestor", "X", "carol"], [{"X": "bob"},
                                          {"X": "alice"}]);
 
 console.log(answerQuery(facts, rules, ["ancestor", "X", "Y"]));
 
-function assertQuery(query, result) {
-  console.assert(_.isEqual(answerQuery(facts, rules, query), result))
-}
+// And that's it for now! Of course this code is extremely naive (we
+// build the whole database for every query, even if huge parts of it
+// might never be used), but hopefully it demonstrates what Datalog is
+// and how it works in principle.
+
+

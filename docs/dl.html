@@ -70,9 +70,9 @@ direct parent (first rule) or if we can trace a line of descendants
 between them using some intermediate ancestor <code>&quot;Z&quot;</code> (second rule).
 As you might have guessed, every rule starts with a head, which is
 a true fact whenever all the following goals are true.</p>
-<p>This part of the database is called the <em>Intensional Database</em>,
-because we don&#39;t state facts directly but use rules to derive them.
-This part is what makes Datalog interesting.</p>
+<p>This part of the database is called the <em>Intensional Database</em>, or
+<em>IDB</em> for short, because we don&#39;t state facts directly but use
+rules to derive them. This part is what makes Datalog interesting.</p>
 
             </div>
             
@@ -123,10 +123,10 @@ our query against all the facts in the database.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-6">&#182;</a>
               </div>
-              <p>buildDatabase takes rules and turns these rules into new facts
-based upon the facts so far. We then add these new facts and try to
+              <p>A database can be built by turning rules into new facts based upon
+the facts so far. We then add these new facts to the DB and try to
 apply all the rules again until no new facts can be derived. (In
-fancy lingo: A fixpoint is reached)</p>
+fancy lingo: Until a fixpoint is reached)</p>
 
             </div>
             
@@ -168,8 +168,8 @@ fancy lingo: A fixpoint is reached)</p>
               </div>
               <p>To turn a rule into a fact, we start by generating all the possible
 bindings of that rule. A binding for the rule</p>
-<pre><code>  [[&quot;ancestor&quot;, &quot;X&quot;, &quot;Y&quot;], [&quot;parent&quot;, &quot;X&quot;, &quot;Y&quot;]]</code></pre>
-<p>could look like this:</p>
+<pre><code>[[&quot;ancestor&quot;, &quot;X&quot;, &quot;Y&quot;], [&quot;parent&quot;, &quot;X&quot;, &quot;Y&quot;]]</code></pre>
+<p>could look like</p>
 <pre><code>{&quot;X&quot;: &quot;alice&quot;, &quot;Y&quot;: &quot;bob&quot;}</code></pre>
 <p>i.e. it contains all the possible variable bindings of a rule.</p>
 <p>We now take all the possible bindings as an array and match them
@@ -268,8 +268,9 @@ for one goal:</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-13">&#182;</a>
               </div>
-              <p>Now that the database is complete, we can run evalQuery on the
-facts to get the result of the query.</p>
+              <p>Now that the database is complete, we can check which facts (if
+any) match against our query by comparing query and fact element
+for element, unifying variables if necessary.</p>
 
             </div>
             
@@ -461,20 +462,63 @@ unifies it with each binding in <code>arr2</code> (and discards anything that ca
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-22">&#182;</a>
               </div>
+              <p>Let&#39;s do some poor man&#39;s unit tests!</p>
+
+            </div>
+            
+            <div class="content"><div class="highlight"><pre><span class="function"><span class="keyword">function</span> <span class="title">assertQuery</span><span class="params">(query, result)</span> {</span>
+  console.assert(_.isEqual(answerQuery(facts, rules, query), result))
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-23">
+            <div class="annotation">
               
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-23">&#182;</a>
+              </div>
+              <p>Carol should be the ancestor of both Dennis and David.</p>
+
             </div>
             
             <div class="content"><div class="highlight"><pre>assertQuery([<span class="string">"ancestor"</span>, <span class="string">"carol"</span>, <span class="string">"Y"</span>], [{<span class="string">"Y"</span>: <span class="string">"dennis"</span>},
-                                         {<span class="string">"Y"</span>: <span class="string">"david"</span>}]);
+                                         {<span class="string">"Y"</span>: <span class="string">"david"</span>}]);</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-24">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-24">&#182;</a>
+              </div>
+              <p>Bob and Alice should be the ancestors of Carol.</p>
 
-assertQuery([<span class="string">"ancestor"</span>, <span class="string">"X"</span>, <span class="string">"carol"</span>], [{<span class="string">"X"</span>: <span class="string">"bob"</span>},
+            </div>
+            
+            <div class="content"><div class="highlight"><pre>assertQuery([<span class="string">"ancestor"</span>, <span class="string">"X"</span>, <span class="string">"carol"</span>], [{<span class="string">"X"</span>: <span class="string">"bob"</span>},
                                          {<span class="string">"X"</span>: <span class="string">"alice"</span>}]);
 
-console.log(answerQuery(facts, rules, [<span class="string">"ancestor"</span>, <span class="string">"X"</span>, <span class="string">"Y"</span>]));
+console.log(answerQuery(facts, rules, [<span class="string">"ancestor"</span>, <span class="string">"X"</span>, <span class="string">"Y"</span>]));</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-25">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-25">&#182;</a>
+              </div>
+              <p>And that&#39;s it for now! Of course this code is extremely naive (we
+build the whole database for every query, even if huge parts of it
+might never be used), but hopefully it demonstrates what Datalog is
+and how it works in principle.</p>
 
-<span class="function"><span class="keyword">function</span> <span class="title">assertQuery</span><span class="params">(query, result)</span> {</span>
-  console.assert(_.isEqual(answerQuery(facts, rules, query), result))
-}</pre></div></div>
+            </div>
             
         </li>
         
