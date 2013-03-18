@@ -37,7 +37,9 @@ var facts = [
 var rules = [
   [["ancestor", "X", "Y"], ["parent", "X", "Y"]],
   [["ancestor", "X", "Y"], ["ancestor", "X", "Z"],
-                           ["ancestor", "Z", "Y"]]
+                           ["ancestor", "Z", "Y"]],
+  [["family", "X", "Y"], ["ancestor", "X", "Y"]],
+  [["family", "X", "Y"], ["family", "Y", "X"]]
 ]
 
 // ## The code
@@ -56,7 +58,7 @@ function answerQuery(facts, rules, query) {
 // fancy lingo: Until a fixpoint is reached)
 
 function buildDatabase(facts, rules) {
-  var newFacts = _.reduce(rules, addRule, facts);
+  var newFacts = _.reduce(rules, applyRule, facts);
   if (facts.length == newFacts.length) {
     return facts;
   } else {
@@ -66,7 +68,7 @@ function buildDatabase(facts, rules) {
 
 // Takes facts and a single rule and returns all the derived facts.
 
-function addRule(facts, rule) {
+function applyRule(facts, rule) {
   var newFacts = _.union(facts, ruleAsFacts(facts, rule));
   return _.uniq(newFacts, false, JSON.stringify);
 }
@@ -238,11 +240,9 @@ assertQuery(["ancestor", "carol", "Y"], [{"Y": "dennis"},
 assertQuery(["ancestor", "X", "carol"], [{"X": "bob"},
                                          {"X": "alice"}]);
 
-console.log(answerQuery(facts, rules, ["ancestor", "X", "Y"]));
+console.log(answerQuery(facts, rules, ["family", "X", "Y"]));
 
 // And that's it for now! Of course this code is extremely naive (we
 // build the whole database for every query, even if huge parts of it
 // might never be used), but hopefully it demonstrates what Datalog is
 // and how it works in principle.
-
-
