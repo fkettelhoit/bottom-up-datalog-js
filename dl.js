@@ -93,14 +93,18 @@ function applyRule(facts, rule) {
 
 //     {"X": "alice", "Y": "bob"}
 
-// i.e. it contains on set of possible variable bindings of that rule
+// i.e. it contains one set of possible variable bindings of that rule
 // for which the rule becomes a true fact.
-// 
-// We now take all the possible bindings as an array and match them
-// all with the rule head, in our example case with
 
-//     ["ancestor", "X", "Y"]
+function ruleAsFacts(facts, rule) {
+  var allPossibleBindings = generateBindings(facts, rule);
+  return _.map(allPossibleBindings, _.partial(substitute, rule[0]))
+}
 
+// We now take all the possible bindings as an array and substitute
+// the variables in the rule head with the corresponding values in the
+// binding (where a variable is simply every capitalized string).
+//
 // For our example binding above (which is just one possible binding),
 // the result of matching it against the rule head would be
 
@@ -109,91 +113,10 @@ function applyRule(facts, rule) {
 // The result of turning a rule into a fact is now simply an array of
 // all these matched bindings.
 
-function ruleAsFacts(facts, rule) {
-  var allPossibleBindings = generateBindings(facts, rule);
-  return _.map(allPossibleBindings, _.partial(substitute, rule[0]))
-}
-
-// ---
-
-//     [["ancestor", "X", "Y"], ["ancestor", "X", "Z"], ["ancestor", "Z", "Y"]]
-//         ^                       ^                    ^
-//      rule head                 goal 1              goal 2
-// becomes
-
-//     [{X: "alice", Y: "bob", Z:...}, {X: "alice", Y: "bill", Z:...}, ...]
-
-function generateBindings(facts, rule) {
-
-  // resolve all the variables in the goals of the rule
-  // for one goal:
-  //
-  //       ["ancestor", "X", "Y"] ==> [{X: "alice", Y: "bob"}, {X: "alice", Y: "bill"}, ...]
-  var goals = _.map(_.rest(rule), _.partial(evalQuery, facts));
-  // several goals might have conflicting bindings, for example
-  //
-  //       [{X: "alice"}, {X: "bob"}] [{X: "alice", X: "bill"}]
-  // unify all the resolved goals to compute the final binding
-  //
-  //       [{X: "alice"}, {X: "bob"}] [{X: "alice"}, {X: "bill"}] => [{X: "alice"}]
-  //               ^                          ^                    ^
-  //            goal 1                   goal 2                unified result
-  //
-  //       [{X: "alice", Y: "bob"}] [{X: "alice", Y: "bill"}] => []
-  return _.reduce(_.rest(goals), unifyBindingArrays, _.first(goals));
-}
-
-// ## Evaluation
-// ---
-
-// Now that the database is complete, we can check which facts (if
-// any) match against our query by comparing query and fact element
-// for element, unifying variables if necessary.
-
-function evalQuery(facts, query) {
-  var matchingFacts = _.filter(facts, _.partial(unify, query));
-  return _.map(matchingFacts, _.partial(asBinding, query));
-}
-
-// Takes a query, e.g.  `["parent","X","bob"]`
-// and a fact, e.g.  `["parent","alice","bob"]`
-// and returns true if all the atoms match (`"bob"` and `"bob"`),
-// or if one of them is a variable (e.g. `"X"` and `"alice"`).
-//
-// Will return false if there is no match, e.g. `["parent", "alice", "bob"]`
-// and `["parent", "alice", "carol"]`
-// because the atoms `"bob"` and `"carol"` do not match.
-function unify(query, fact) {
-  return _.every(_.zip(query, fact), function(pair) {
-    return pair[0] == pair[1] || isVariable(pair[0]) || isVariable(pair[1]);
-  });
-}
-
-
-// Takes a query, e.g.  `["parent","X","bob"]`
-// and a fact, e.g.  `["parent","alice","bob"]`
-// and returns an object with the query variables as keys,
-// and the matching atoms in the fact as values, e.g.
-// `{"X": "alice"}`.
-function asBinding(query, fact) {
-  return _.pick(_.object(query, fact), _.filter(query, isVariable));
-}
-
-// An identifier is a variable if it starts with an uppercase symbol.
-function isVariable(identifier) {
-  return identifier[0].toUpperCase() == identifier[0]
-}
-
-// Takes a query (e.g. `["parent","X","bob"]`) and bindings (e.g. `{"X": "alice"}`)
-// and substitutes each variable with the corresponding binding, e.g.
-// `["parent","alice","bob"]`
 function substitute(query, bindings) {
   return _.map(query, _.partial(unifyVar, bindings));
 }
 
-// Takes bindings (e.g. `{"X": "alice"}`) and looks up the value for
-// the identifier if it's a variable. For example, `"X"` becomes `"alice"`, but 
-// `"bob"` stays `"bob"`.
 function unifyVar(bindings, identifier) {
   if (isVariable(identifier)) {
     return bindings[identifier] || identifier;
@@ -202,20 +125,48 @@ function unifyVar(bindings, identifier) {
   }
 }
 
-// Takes two bindings, e.g. `{"X": "alice", "Y": "bob"}` and
-// `{"X": "alice", "Z": "carol"}`, and returns the unification, e.g.
-// `{"X": "alice", "Y": "bob", "Z": "carol"}`.
-function unifyBindings(bindings1, bindings2) {
-  var joined = _.defaults(_.clone(bindings1), bindings2);
-  if (_.isEqual(joined, _.extend(_.clone(bindings1), bindings2))) {
-    return joined;
-  }
+function isVariable(identifier) {
+  return identifier[0].toUpperCase() == identifier[0]
 }
 
-// Unifies all the bindings from one goal with all the bindings from
-// another goal. Let's imagine for example the goals
-// `["ancestor", "X", "Y"]` and `["ancestor", "Y", "Z"]`, for which
-// the possible bindings might look like
+// ---
+
+// Now let's see how bindings are generated. For the input
+
+//     [["ancestor", "X", "Y"], ["ancestor", "X", "Z"],
+//                                     ["ancestor", "Z", "Y"]]
+//          ^                       ^         ^
+//      rule head                 goal 1    goal 2
+
+// we would like the output to be something along the lines of
+
+//     [{X: "alice", Y: "bob", Z:...},
+//      {X: "alice", Y: "bill", Z:...}, ...]
+
+// To get there, we first of all need to resolve the variables of each
+// goal, so that we get back several sets of possible bindings for
+// each goal. An example of a result for 2 goals could be
+
+//       [{X: "alice"}, {X: "bob"}] [{X: "alice", X: "bill"}]
+
+// To be a valid binding for the whole rule, a variable binding must
+// be valid for each goal. In the above example `"alice"` is a valid
+// binding for `X`, but both `"bob"` and `"bill"` are only valid for
+// one goal and thus not for the whole rule. This is why we need to
+// unify all the bindings for each goal with all the bindings for all
+// the other goals.
+
+function generateBindings(facts, rule) {
+  var goals = _.map(_.rest(rule), _.partial(evalQuery, facts));
+  return _.reduce(_.rest(goals), unifyBindingArrays, _.first(goals));
+}
+
+
+// ---
+
+// To see the unification of binding arrays in action, let's consider
+// the goals `["ancestor", "X", "Y"]` and `["ancestor", "Y", "Z"]`,
+// for which the possible bindings might look like
 //
 //     [{"X": "alice", "Y": "bob"}, {"X": "teddy", "Y": "bob"}]
 //
@@ -223,7 +174,7 @@ function unifyBindings(bindings1, bindings2) {
 //
 //     [{"Y": "bob", "Z": "carol"}, {"Y": "joe", "Z": "jack"}]
 //
-// Now the result is
+// respectively. Now the result is
 //
 //     [{"X": "alice", "Y": "bob", "Z": "carol"},
 //      {"X": "teddy", "Y": "bob", "Z": "carol"}]
@@ -232,13 +183,68 @@ function unifyBindings(bindings1, bindings2) {
 // first binding in the second array, but no unification is possible
 // for the binding `{"Y": "joe", "Z": "jack"}`.
 
+// We get this result by unifying each binding of each goal with each
+// binding of each other goal, while discarding all the falsy values
+// (the bindings which cannot be unified) and then flattening the
+// resulting collection in the end.
 
-// Takes two arrays `arr1` and `arr2` of bindings. For each binding `b` in `arr1`,
-// unifies it with each binding in `arr2` (and discards anything that cannot by unified).
 function unifyBindingArrays(arr1, arr2) {
   return _.flatten(_.map(arr1, function(bindings) {
     return _.compact(_.map(arr2, _.partial(unifyBindings, bindings)))
   }))
+}
+
+// The unification of 2 bindings is a simple merge of the 2 objects,
+// where we make sure that whenever a variable is contained in both
+// objects, the value is the same (or the unification of these 2
+// bindings fails).
+
+function unifyBindings(bindings1, bindings2) {
+  var joined = _.defaults(_.clone(bindings1), bindings2);
+  if (_.isEqual(joined, _.extend(_.clone(bindings1), bindings2))) {
+    return joined;
+  }
+}
+
+// ## Evaluation
+// ---
+
+// Now that the database is complete, we can check which facts (if
+// any) match against our query by comparing query and fact element
+// for element, unifying variables if necessary, and returning the
+// results as bindings.
+
+function evalQuery(facts, query) {
+  var matchingFacts = _.filter(facts, _.partial(unify, query));
+  return _.map(matchingFacts, _.partial(asBinding, query));
+}
+
+// ---
+
+// The unification expects a query, e.g. `["parent","X","bob"]` and a
+// fact, e.g. `["parent","alice","bob"]` and returns true if for all
+// the atoms they either match (`"bob"` and `"bob"`), or if one of
+// them is a variable (e.g. `"X"` and `"alice"`).
+//
+// It will return false if there is no match, e.g. for the query
+// `["parent", "alice", "bob"]` and `["parent", "alice", "carol"]`
+// because the atoms `"bob"` and `"carol"` do not match.
+
+function unify(query, fact) {
+  return _.every(_.zip(query, fact), function(pair) {
+    return pair[0] == pair[1] || isVariable(pair[0]) || isVariable(pair[1]);
+  });
+}
+
+// ---
+
+// To turn a fact into a binding for a query, we take a query, e.g.
+// `["parent","X","bob"]` and a fact, e.g.  `["parent","alice","bob"]`
+// and return an object with the query variables as keys, and the
+// matching atoms in the fact as values, e.g. `{"X": "alice"}`.
+
+function asBinding(query, fact) {
+  return _.pick(_.object(query, fact), _.filter(query, isVariable));
 }
 
 // ## Examples
