@@ -4,10 +4,11 @@
 //
 // ---
 
-// First of all, we need a few facts. Alice is the parent of both Bob
-// and Bill, this is expressed as `["parent", "alice", "bob"]` and
-// `["parent", "alice", "bill"]`. Bob and Bill are parent themselves
-// and so forth.
+// First of all, we need a few facts. Let's assume that Alice is the
+// parent of both Bob and Bill; this can be expressed as the facts
+// `["parent", "alice", "bob"]` and `["parent", "alice", "bill"]`.
+// Let's also assume that Bob and Bill are parents themselves (and so
+// forth).
 //
 // This part of the database is called the *Extensional Database*, or
 // *EDB* for short, because we state the facts by simply enumerating
@@ -24,10 +25,10 @@ var facts = [
 // Let's now define a few rules, which allow us to derive new facts
 // based on the existing database.
 //
-// Here we say that `"X"` is an ancestor of `"Y"` if `"X"` is either a
-// direct parent (first rule) or if we can trace a line of descendants
-// between them using some intermediate ancestor `"Z"` (second rule).
-// As you might have guessed, every rule starts with a head, which is
+// We say that `"X"` is an ancestor of `"Y"` if `"X"` is either a
+// direct parent (first case) or if we can trace a line of descendants
+// between them using some intermediate ancestor `"Z"` (second case).
+// As you might have guessed, every case starts with a head, which is
 // a true fact whenever all the following goals are true.
 //
 // This part of the database is called the *Intensional Database*, or
@@ -66,7 +67,9 @@ function buildDatabase(facts, rules) {
   }
 }
 
-// Takes facts and a single rule and returns all the derived facts.
+// To apply a rule to the existing database of facts, we turn a rule
+// into a set of facts and take the union of these new facts and our
+// existing facts, discarding all duplicate entries.
 
 function applyRule(facts, rule) {
   var newFacts = _.union(facts, ruleAsFacts(facts, rule));
@@ -82,17 +85,21 @@ function applyRule(facts, rule) {
 
 //     {"X": "alice", "Y": "bob"}
 
-// i.e. it contains all the possible variable bindings of a rule.
+// i.e. it contains on set of possible variable bindings of that rule
+// for which the rule becomes a true fact.
 // 
 // We now take all the possible bindings as an array and match them
-// with the rule head, in our example case with
+// all with the rule head, in our example case with
 
 //     ["ancestor", "X", "Y"]
 
-// leading to the result
+// For our example binding above (which is just one possible binding),
+// the result of matching it against the rule head would be
 
 //     ["ancestor", "alice", "bob"]
-// FIXME: show that the result is actually an array of results
+
+// The result of turning a rule into a fact is now simply an array of
+// all these matched bindings.
 
 function ruleAsFacts(facts, rule) {
   var allPossibleBindings = generateBindings(facts, rule);
