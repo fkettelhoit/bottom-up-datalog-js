@@ -506,3 +506,10 @@ pre .chunk {
 pre .tex .formula {
   opacity: 0.5;
 }
+
+/*---------------------- Links -----------------------------*/
+
+a:link {text-decoration:none; background-color:#ffaaaa;}
+a:visited {text-decoration:none; background-color:#ffaaaa;}
+a:hover {text-decoration:none; background-color:#ff704d;}
+a:active {text-decoration:none; background-color:#ff704d;}
