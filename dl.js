@@ -1,6 +1,6 @@
 // # Bottom Up Datalog
 
-// ## The database
+// ## Initial Facts & Rules
 //
 // ---
 
@@ -45,7 +45,7 @@ var rules = [
   [["family", "X", "Y"], ["family", "Y", "X"]]
 ]
 
-// ## The code
+// ## Building the database
 // ---
 
 // To answer a query, we first need to build a database and then run
@@ -250,22 +250,26 @@ function asBinding(query, fact) {
 // ## Examples
 // ---
 
-// Let's do some poor man's unit tests!
+// Let's make sure we understand how Datalog works. The following
+// should be true:
+//
+// +  Carol should be the ancestor of both Dennis and David.
+// +  Bob and Alice should be the ancestors of Carol.
+
 function assertQuery(query, result) {
   console.assert(_.isEqual(answerQuery(facts, rules, query), result))
 }
 
-// Carol should be the ancestor of both Dennis and David.
 assertQuery(["ancestor", "carol", "Y"], [{"Y": "dennis"},
                                          {"Y": "david"}]);
 
-// Bob and Alice should be the ancestors of Carol.
 assertQuery(["ancestor", "X", "carol"], [{"X": "bob"},
                                          {"X": "alice"}]);
 
 console.log(answerQuery(facts, rules, ["family", "X", "Y"]));
 
-// And that's it for now! Of course this code is extremely naive (we
-// build the whole database for every query, even if huge parts of it
-// might never be used), but hopefully it demonstrates what Datalog is
-// and how it works in principle.
+// And that's it for now! Of course this way of evaluating Datalog
+// queries is extremely naive (we build the whole database for every
+// query, even if huge parts of the DB might never be used), but
+// hopefully it demonstrates what Datalog is and how it works in
+// principle.
