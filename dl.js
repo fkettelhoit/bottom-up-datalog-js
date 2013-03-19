@@ -22,6 +22,8 @@ var facts = [
   ["parent", "carol", "david"]
 ]
 
+// ---
+
 // Let's now define a few rules, which allow us to derive new facts
 // based on the existing database.
 //
@@ -53,6 +55,8 @@ function answerQuery(facts, rules, query) {
   return evalQuery(buildDatabase(facts, rules), query);
 }
 
+// ---
+
 // A database can be built by turning rules into new facts based upon
 // the facts so far. We then add these new facts to the DB and try to
 // apply all the rules again until no new facts can be derived. (In
@@ -67,6 +71,8 @@ function buildDatabase(facts, rules) {
   }
 }
 
+// ---
+
 // To apply a rule to the existing database of facts, we turn a rule
 // into a set of facts and take the union of these new facts and our
 // existing facts, discarding all duplicate entries.
@@ -75,6 +81,8 @@ function applyRule(facts, rule) {
   var newFacts = _.union(facts, ruleAsFacts(facts, rule));
   return _.uniq(newFacts, false, JSON.stringify);
 }
+
+// ---
 
 // To turn a rule into a fact, we start by generating all the possible
 // bindings of that rule. A binding for the rule
@@ -105,6 +113,8 @@ function ruleAsFacts(facts, rule) {
   var allPossibleBindings = generateBindings(facts, rule);
   return _.map(allPossibleBindings, _.partial(substitute, rule[0]))
 }
+
+// ---
 
 //     [["ancestor", "X", "Y"], ["ancestor", "X", "Z"], ["ancestor", "Z", "Y"]]
 //         ^                       ^                    ^
